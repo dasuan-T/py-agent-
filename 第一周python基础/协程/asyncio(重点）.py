@@ -20,7 +20,7 @@ async def main():#等价写法
 #     await asyncio.gather(#asyncio.gather内部自动帮你创建 task
 #         func1(),
 #         func2()
-#     )#gather的返回值永远是列表
+#     )#gather的返回值永远是列表。gather的作用是实现多任务并发，单任务不需要gather
 if __name__ == '__main__':
     asyncio.run(main())#在这里已经创建了事件循环
 #遇到io阻塞自动切换，遇到网络io请求会有作用
