@@ -18,8 +18,9 @@ def load_history():#拿历史对话记录
 
     try:
         cur.execute(select_sql,(session_id,))
-        for i in cur.fetchall():
+        for i in cur.fetchall():#变成列表
             messages.append({"role": i[0], "content": i[1]})
+        messages.reverse()# 倒序取出来的，反转成正序
         return messages#返回列表
     finally:
         cur.close()
