@@ -100,70 +100,112 @@
         .chat-container::-webkit-scrollbar-track { background: transparent; }
     </style>
 </head>
+```
 <body>
+    <!-- 页面顶部标题栏 -->
     <div class="header">AI 对话助手</div>
+    <!-- 消息显示区域，所有对话消息都渲染在这里面 -->
     <div class="chat-container" id="chatContainer"></div>
+    <!-- 底部输入区域：输入框 + 发送按钮 -->
     <div class="input-area">
+        <!-- 文本输入框，placeholder 是提示文字，autocomplete=off 关闭浏览器自动补全 -->
         <input type="text" id="messageInput" placeholder="输入消息，按回车发送..." autocomplete="off">
+        <!-- 发送按钮，点击时调用 sendMessage() 函数 -->
         <button id="sendBtn" onclick="sendMessage()">发送</button>
     </div>
     <script>
+        // 获取消息显示区域的 DOM 元素，用来往里面追加消息
         const chatContainer = document.getElementById('chatContainer');//消息显示区
+        // 获取输入框的 DOM 元素，用来读取用户输入
         const messageInput = document.getElementById('messageInput');// 输入框
+        // 获取发送按钮的 DOM 元素，用来控制禁用/启用状态
         const sendBtn = document.getElementById('sendBtn');// 发送按钮
-<!---->
-<!--接口1-->
+
+        <!-- 接口1：页面加载完成后，自动从后端拉取历史对话并渲染 -->
         window.onload = async function() {
             try {
+                // 向后端 GET 请求 /api/history，获取历史对话列表
                 const res = await fetch('/api/history');<!--GET 请求，不需要参数-->
+                // 把后端返回的 JSON 字符串解析成 JS 数组/对象
                 const history = await res.json();<!--解析响应为 JSON-->
+                // 遍历历史消息，每条都调用 addMessage 渲染到页面上
                 history.forEach(msg => addMessage(msg.role, msg.content));<!--每条消息渲染到页面-->
             } catch (e) { console.error('加载历史失败:', e); }
+            // 页面加载完后自动聚焦到输入框，用户可以直接打字，就是让光标在输入框内
             messageInput.focus();
         };
 
+        // 监听输入框的键盘事件，按回车键时触发发送
         messageInput.addEventListener('keypress', function(e) {
+            // 如果按下的是回车键，就调用 sendMessage 发送消息
             if (e.key === 'Enter') sendMessage();
         });
 
-<!--接口2-->
+        <!-- 接口2：发送消息的核心函数，用户点击发送或按回车时调用 -->
         async function sendMessage() {
+            // 读取输入框内容，trim() 去掉首尾空格
             const text = messageInput.value.trim();
+            // 如果输入为空，直接返回不处理
             if (!text) return;
+            // 先把用户的消息渲染到页面上（右侧气泡）
             addMessage('user', text);
+            // 清空输入框，准备下一次输入
             messageInput.value = '';
+            // 禁用发送按钮，防止用户重复点击
             sendBtn.disabled = true;//禁用发送按钮，防止重复点击
+            // 先在页面上显示一条"正在思考..."的占位消息（loading 动画）
             const typingEl = addMessage('assistant', '正在思考...');
+            // 给这条占位消息加上 typing 样式（动画效果）
             typingEl.classList.add('typing');
             try {
+                // 向后端 POST 请求 /api/chat，发送用户消息
                 const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',  // POST 方法
+                    headers: { 'Content-Type': 'application/json' },  // 告诉后端我发的是 JSON 格式
                     body: JSON.stringify({ message: text })//JS 对象转成 JSON 字符串发出去
                 });
+                // 解析后端返回的 JSON，拿到 AI 的回复
                 const data = await res.json();
+                // 删掉"正在思考..."的占位消息
                 typingEl.remove();
+                // 把 AI 的回复渲染到页面上（左侧气泡）
                 addMessage('assistant', data.reply);
             } catch (e) {
+                // 请求出错时，删掉占位消息
                 typingEl.remove();
+                // 显示错误提示
                 addMessage('assistant', '请求失败，请检查网络或后端服务是否启动');
             } finally {
+                // 不管成功还是失败，最后都启用发送按钮
                 sendBtn.disabled = false;
+                // 重新聚焦到输入框
                 messageInput.focus();
             }
         }
 
+        // 自定义函数：往聊天区域添加一条消息
+        // role 是角色（user 或 assistant），content 是消息内容
         function addMessage(role, content) {//自定函数
+            // 创建一个新的 div 元素，作为消息的外层容器
             const msgDiv = document.createElement('div');
+            // 给外层 div 加上 class（message + user/assistant），用来区分左右样式
             msgDiv.className = 'message ' + role;
+            // 创建一个气泡 div，用来显示消息内容
             const bubble = document.createElement('div');
+            // 气泡的 class
             bubble.className = 'bubble';
+            // 设置气泡里的文字内容（用 textContent 防止 XSS 攻击）
             bubble.textContent = content;
+            // 把气泡 div 放到外层消息 div 里面
             msgDiv.appendChild(bubble);
+            // 把整条消息（外层 div）加到聊天容器里
             chatContainer.appendChild(msgDiv);
+            // 滚动到聊天区域最底部，让最新消息可见
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            // 返回气泡元素，方便后面修改或删除（比如"正在思考..."那条）
             return bubble;
         }
     </script>
 </body>
 </html>
+```

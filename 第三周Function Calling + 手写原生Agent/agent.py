@@ -1,24 +1,40 @@
 # AI 调用 + Agent 主循环
 import requests
 import json
-from config import *
 from tools import *
 from db import *
 
 def chat_with_ai(messages):#发送请求，拿到回复
-    resp=requests.post(
-        url=base_url,
-        headers=headers,
-        json={
-            "model":model,
-            "messages":messages,
-            "tools":tools,
-        })
-    # print("请求URL：", base_url)
-    # print("请求model：", model)
-    # print("状态码：", resp.status_code)
-    # print("响应内容：", resp.text[:1000])  # 打印前1000个字符
-    return resp.json()["choices"][0]["message"]
+    try:
+        resp=requests.post(
+            url=base_url,
+            headers=headers,
+            json={
+                "model":model,
+                "messages":messages,
+                "tools":tools,
+                "temperature":0.7,
+                "max_tokens":1000,
+            },
+            timeout=50
+        )
+        # print("请求URL：", base_url)
+        # print("请求model：", model)
+        # print("状态码：", resp.status_code)
+        # print("响应内容：", resp.text[:1000])  # 打印前1000个字符
+        return resp.json()["choices"][0]["message"]
+    except requests.exceptions.Timeout as e:
+        print(f"AI请求超时{e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP请求失败{e}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"网络错误{e}")
+        return None
+    except Exception as e:
+        print(f"未知错误{e}")
+        return None
 
 def chat(user_mes):
 
@@ -38,13 +54,16 @@ def chat(user_mes):
         turn_count = 0
         while turn_count < max_turns:
             #调用 AI
+
             ai_message = chat_with_ai(mes_history)#这里返回的是[message],这里面是包含了content和tools
             #判断有没有 tool_calls
-
+            if ai_message is None:
+                return "AI请求失败，请稍后重试"
             if ai_message.get("tool_calls"):
                 turn_count += 1
                 if turn_count >= max_turns:
                     # 超过最大次数，强制返回
+                    cur.execute(insert_sql, (session_id, "assistant", "超过最大调用次数，强制返回",))
                     return "抱歉，处理超时，请换个方式提问"
                 mes_history.append(ai_message)#那这里把整个message加入到历史对话中，会不会出问题
 
@@ -60,6 +79,7 @@ def chat(user_mes):
                         "tool_call_id": tool_call["id"],
                         "content": str(result)
                     })
+
                 # 继续循环，再次调用 AI
                 continue
             #没有 tool_calls → AI 给出了最终回答

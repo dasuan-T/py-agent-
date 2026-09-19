@@ -1,14 +1,19 @@
 # 配置：API Key、数据库配置、常量
 # config.py
 import os
+from os import getenv
+
 from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("qwen_api_key")
 tavily_api_key = os.getenv("tavily_api_key")
+weather_key=os.getenv("weather_api_key")
+mysql_password=getenv("mysql_password")
+
 tavily_base_url="https://api.tavily.com/search"
 base_url="https://ws-x6sdlxofcq0or0e9.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions"
 weather_url="https://restapi.amap.com/v3/weather/weatherInfo"
-weather_key="a1385cf6c0219f170cbf19eb0672f67e"
+
 model="qwen3.7-flash-2026-07-15"
 headers={
      "Accept": "application/json",
